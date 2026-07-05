@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morning Intelligence Brief</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #0f0f0f;
+    --ink-2: #3a3a3a;
+    --ink-3: #7a7a7a;
+    --paper: #f7f5f0;
+    --paper-2: #eeeae2;
+    --signal: #1a3a2a;
+    --signal-light: #e8f0eb;
+    --rule: #d4cfc6;
+    --mono: 'IBM Plex Mono', monospace;
+    --serif: 'IBM Plex Serif', Georgia, serif;
+    --sans: 'Inter', system-ui, sans-serif;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* MASTHEAD */
+  .masthead {
+    border-bottom: 2px solid var(--ink);
+    padding: 1.25rem 2rem 1rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .masthead-left { display: flex; align-items: baseline; gap: 14px; }
+  .show-name {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .show-tagline {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.04em;
+  }
+  .masthead-date {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+
+  /* CONTROLS */
+  .controls-bar {
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: var(--paper-2);
+  }
+  .controls-bar select {
+    font-family: var(--mono);
+    font-size: 12px;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .btn-generate {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    height: 32px;
+    padding: 0 16px;
+    background: var(--signal);
+    color: #fff;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    letter-spacing: 0.03em;
+    transition: opacity 0.15s;
+  }
+  .btn-generate:hover { opacity: 0.85; }
+  .btn-generate:disabled { opacity: 0.45; cursor: not-allowed; }
+  .spinner {
+    width: 12px; height: 12px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* CONTENT AREA */
+  .content {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 2rem 4rem;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    padding: 4rem 0;
+    text-align: center;
+  }
+  .empty-icon {
+    font-family: var(--mono);
+    font-size: 32px;
+    color: var(--rule);
+    margin-bottom: 1rem;
+  }
+  .empty-state p {
+    font-family: var(--serif);
+    font-size: 16px;
+    color: var(--ink-3);
+    font-style: italic;
+  }
+
+  /* LOADING */
+  .loading-state {
+    display: none;
+    padding: 3rem 0;
+  }
+  .loading-bar {
+    height: 2px;
+    background: var(--rule);
+    border-radius: 1px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .loading-bar-inner {
+    height: 100%;
+    background: var(--signal);
+    width: 0%;
+    animation: loadprogress 18s ease-out forwards;
+  }
+  @keyframes loadprogress { 0% { width: 0% } 80% { width: 85% } 100% { width: 90% } }
+  .loading-text {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .loading-text span { animation: blink 1.2s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* BRIEF */
+  .brief { display: none; }
+
+  .brief-dateline {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  /* TODAY'S AGENDA */
+  .agenda {
+    margin-bottom: 2.5rem;
+  }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 0.75rem;
+  }
+  .agenda-intro {
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.65;
+    color: var(--ink);
+    font-style: italic;
+    padding: 1rem 1.25rem;
+    border-left: 3px solid var(--signal);
+    background: var(--signal-light);
+    border-radius: 0 4px 4px 0;
+  }
+  .agenda-items {
+    list-style: none;
+    margin-top: 1rem;
+  }
+  .agenda-items li {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-2);
+    padding: 5px 0 5px 16px;
+    position: relative;
+    border-bottom: 1px solid var(--rule);
+  }
+  .agenda-items li:last-child { border-bottom: none; }
+  .agenda-items li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--signal);
+    font-size: 11px;
+  }
+
+  /* RUNDOWN */
+  .rundown { margin-bottom: 2.5rem; }
+  .rundown-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .rundown-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+
+  .story {
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .story:last-child { border-bottom: none; }
+  .story-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .story-headline {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.4;
+    margin-bottom: 8px;
+    color: var(--ink);
+  }
+  .story-body {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink-2);
+    margin-bottom: 10px;
+  }
+  .so-what {
+    font-family: var(--serif);
+    font-size: 13px;
+    font-style: italic;
+    color: var(--signal);
+    padding: 8px 12px;
+    border-left: 2px solid var(--signal);
+    line-height: 1.55;
+    background: var(--signal-light);
+  }
+  .so-what strong {
+    font-style: normal;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 3px;
+    color: var(--signal);
+  }
+  .story-source {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-3);
+    margin-top: 8px;
+  }
+
+  /* DEEP CUT */
+  .deep-cut {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 1.75rem;
+    border-radius: 4px;
+    margin-bottom: 2.5rem;
+  }
+  .deep-cut-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8a9e90;
+    margin-bottom: 1rem;
+  }
+  .deep-cut-headline {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.35;
+    margin-bottom: 1rem;
+    color: var(--paper);
+  }
+  .deep-cut-body {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.75;
+    color: #c8c4bc;
+    margin-bottom: 1.25rem;
+  }
+  .deep-cut-sowhat {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #e8f0eb;
+    border-top: 1px solid #2a3a2e;
+    padding-top: 1rem;
+  }
+  .deep-cut-sowhat strong {
+    font-style: normal;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+    color: #8a9e90;
+  }
+  .deep-cut-source {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: #5a6a5e;
+    margin-top: 12px;
+  }
+
+  /* CLOSER */
+  .closer {
+    font-family: var(--serif);
+    font-size: 15px;
+    font-style: italic;
+    color: var(--ink-3);
+    text-align: center;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  /* ERROR */
+  .error-state {
+    display: none;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #8b2020;
+    background: #fdf0f0;
+    border: 1px solid #e8c0c0;
+    border-radius: 2px;
+    padding: 12px 16px;
+    margin-top: 1.5rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="masthead-left">
+    <span class="show-name">Morning Intelligence</span>
+    <span class="show-tagline">// daily AI briefing</span>
+  </div>
+  <span class="masthead-date" id="todayDate"></span>
+</div>
+
+<div class="controls-bar">
+  <select id="focusSelect">
+    <option value="all">All AI news</option>
+    <option value="research">Research & models</option>
+    <option value="industry">Industry & business</option>
+    <option value="policy">Policy & regulation</option>
+    <option value="safety">Safety & ethics</option>
+  </select>
+  <select id="depthSelect">
+    <option value="brief">Quick brief (4 stories)</option>
+    <option value="standard" selected>Standard (6 stories)</option>
+    <option value="full">Full rundown (8 stories)</option>
+  </select>
+  <button class="btn-generate" id="genBtn" onclick="generateBrief()">
+    <div class="spinner" id="spinner"></div>
+    Generate today's brief
+  </button>
+</div>
+
+<div class="content">
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">◎</div>
+    <p>Hit generate and Dom will wade through the noise for you.</p>
+  </div>
+
+  <div class="loading-state" id="loadingState">
+    <div class="loading-bar"><div class="loading-bar-inner"></div></div>
+    <div class="loading-text">Scanning Bloomberg, CNBC, TechCrunch, Axios, The Verge, Reuters, Wired, MIT Tech Review, VentureBeat, Ars Technica, FT, The Information<span>…</span></div>
+  </div>
+
+  <div class="error-state" id="errorState"></div>
+
+  <div class="brief" id="briefContent"></div>
+</div>
+
+<script>
+  // Set today's date
+  const now = new Date();
+  document.getElementById('todayDate').textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  function repairJSON(str) {
+    // Remove trailing commas before } or ]
+    str = str.replace(/,\s*([}\]])/g, '$1');
+    // If string is truncated mid-way, try to close open structures
+    try {
+      JSON.parse(str);
+      return str;
+    } catch(e) {
+      // Count open braces/brackets and close them
+      let opens = 0, openSquare = 0;
+      let inString = false, escape = false;
+      for (let i = 0; i < str.length; i++) {
+        const c = str[i];
+        if (escape) { escape = false; continue; }
+        if (c === '\\' && inString) { escape = true; continue; }
+        if (c === '"') { inString = !inString; continue; }
+        if (inString) continue;
+        if (c === '{') opens++;
+        else if (c === '}') opens--;
+        else if (c === '[') openSquare++;
+        else if (c === ']') openSquare--;
+      }
+      // Trim to last complete value — find last } or ] at top level
+      const lastBrace = str.lastIndexOf('",');
+      if (lastBrace > 0) str = str.substring(0, lastBrace + 1);
+      // Close any open arrays and objects
+      for (let i = 0; i < openSquare; i++) str += ']';
+      for (let i = 0; i < opens; i++) str += '}';
+      return str;
+    }
+  }
+
+  async function generateBrief() {
+    const btn = document.getElementById('genBtn');
+    const spinner = document.getElementById('spinner');
+    const emptyState = document.getElementById('emptyState');
+    const loadingState = document.getElementById('loadingState');
+    const briefContent = document.getElementById('briefContent');
+    const errorState = document.getElementById('errorState');
+    const focus = document.getElementById('focusSelect').value;
+    const depth = document.getElementById('depthSelect').value;
+
+    btn.disabled = true;
+    spinner.style.display = 'block';
+    emptyState.style.display = 'none';
+    briefContent.style.display = 'none';
+    errorState.style.display = 'none';
+    loadingState.style.display = 'block';
+
+    const storyCount = { brief: 4, standard: 6, full: 8 }[depth];
+
+    const focusMap = {
+      all: 'Cover all areas: model releases, business/funding, policy, products, and research breakthroughs.',
+      research: 'Focus on AI research, model releases, and technical breakthroughs.',
+      industry: 'Focus on AI business news — funding rounds, acquisitions, earnings, partnerships.',
+      policy: 'Focus on AI regulation, government actions, and legal developments.',
+      safety: 'Focus on AI safety, ethics, alignment research, and societal impact.'
+    };
+
+    const today = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+    const systemPrompt = `You are Dom, the host of Morning Intelligence — a daily AI news briefing. Your voice is conversational, direct, and witty. You wade through a huge amount of information every morning so your listener doesn't have to. You always explain not just *what* happened, but *so what* — why does this matter to the person listening right now.
+
+Your tone: like a knowledgeable friend briefing you over coffee. Not academic, not corporate. You're fact-first but you're not a robot. You occasionally use phrases like "here's the thing", "and this is the part that matters", "so what does that mean for you", "worth paying attention to".
+
+Sources to draw from (prioritized): Bloomberg, Reuters, Financial Times, CNBC, Axios, TechCrunch, The Verge, Wired, MIT Technology Review, VentureBeat, Ars Technica, The Information.
+
+Return ONLY valid JSON, no markdown fences, no preamble, no explanation. Keep each body field to 2 sentences max and so_what to 1 sentence max — brevity is the point. Structure exactly:
+{
+  "date": "${today}",
+  "agenda_intro": "2 sentences in Dom's voice previewing what you're covering today — like opening a podcast episode",
+  "agenda_items": ["short item 1", "short item 2", "short item 3", "short item 4"],
+  "rundown": [
+    {
+      "headline": "punchy headline",
+      "body": "2-3 sentences of factual summary. What happened, who's involved, key numbers.",
+      "so_what": "1-2 sentences in Dom's voice — why does this matter to the listener personally or professionally?",
+      "source": "Source name"
+    }
+  ],
+  "deep_cut": {
+    "headline": "headline for the deep cut story",
+    "body": "3-4 sentences going deeper on this one story. Context, background, what's at stake.",
+    "so_what": "2-3 sentences in Dom's voice — this is the moment to really land why this story matters more than the others today.",
+    "source": "Source name"
+  },
+  "closer": "One closing line in Dom's voice — sign-off energy, like ending a podcast episode."
+}`;
+
+    const userPrompt = `Today is ${today}. Use web search to find the most important AI news from the last 24-48 hours. ${focusMap[focus]}
+
+Generate exactly ${storyCount} rundown stories plus one deep cut. The deep cut should be the most interesting or underreported story — the one Dom would say deserves more than a headline. Make sure all stories are real and verified from today or yesterday.`;
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 4000,
+          system: systemPrompt,
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          messages: [
+            { role: 'user', content: userPrompt }
+          ]
+        })
+      });
+
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({}));
+        throw new Error(`API ${resp.status}: ${errBody?.error?.message || 'unknown error'}`);
+      }
+      const data = await resp.json();
+
+      const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+      // Extract and repair JSON
+      const match = text.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('No JSON found in response');
+      const json = JSON.parse(repairJSON(match[0]));
+
+      renderBrief(json);
+    } catch (err) {
+      errorState.textContent = `Something went wrong: ${err.message}`;
+      errorState.style.display = 'block';
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      loadingState.style.display = 'none';
+    }
+  }
+
+  function renderBrief(d) {
+    const briefContent = document.getElementById('briefContent');
+
+    const agendaItems = d.agenda_items.map(item => `<li>${item}</li>`).join('');
+
+    const rundownStories = d.rundown.map((s, i) => `
+      <div class="story">
+        <div class="story-num">0${i + 1}</div>
+        <div class="story-headline">${s.headline}</div>
+        <div class="story-body">${s.body}</div>
+        <div class="so-what"><strong>So what?</strong>${s.so_what}</div>
+        <div class="story-source">via ${s.source}</div>
+      </div>
+    `).join('');
+
+    briefContent.innerHTML = `
+      <div class="brief-dateline">${d.date} &nbsp;·&nbsp; Morning Intelligence</div>
+
+      <div class="agenda">
+        <div class="section-label">Today's agenda</div>
+        <div class="agenda-intro">${d.agenda_intro}</div>
+        <ul class="agenda-items">${agendaItems}</ul>
+      </div>
+
+      <div class="rundown">
+        <div class="rundown-label">The rundown</div>
+        ${rundownStories}
+      </div>
+
+      <div class="deep-cut">
+        <div class="deep-cut-label">The deep cut</div>
+        <div class="deep-cut-headline">${d.deep_cut.headline}</div>
+        <div class="deep-cut-body">${d.deep_cut.body}</div>
+        <div class="deep-cut-sowhat"><strong>So what?</strong>${d.deep_cut.so_what}</div>
+        <div class="deep-cut-source">via ${d.deep_cut.source}</div>
+      </div>
+
+      <div class="closer">${d.closer}</div>
+    `;
+
+    briefContent.style.display = 'block';
+  }
+</script>
+</body>
+</html>
